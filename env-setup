@@ -1,1 +1,2 @@
 export ANSIBLE_LIBRARY=.
+export PYTHONPATH=venv/lib/python3.6/site-packages/ansible

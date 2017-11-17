@@ -4,7 +4,7 @@
   tasks:
   - name: run gelf_logger
     gelf_logger:
-      dest: "tcp://"
+      dest: "tcp://127.0.0.1:12202"
       message: "hello_world"
       full_message: "lorem ipsum"
       host: "{{ ansible_hostname }}"
