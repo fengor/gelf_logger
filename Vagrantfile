@@ -5,6 +5,8 @@ Vagrant.configure(2)  do |config|
   config.vm.network :forwarded_port, guest: 80, host: 8080
   config.vm.network :forwarded_port, guest: 12201, host: 12201, protocol: 'udp'
   config.vm.network :forwarded_port, guest: 12201, host: 12201, protocol: 'tcp'
+  config.vm.network :forwarded_port, guest: 12202, host: 12202, protocol: 'udp'
+  config.vm.network :forwarded_port, guest: 12202, host: 12202, protocol: 'tcp'
 
   config.vm.provider "virtualbox" do |v|
     v.memory = 2048

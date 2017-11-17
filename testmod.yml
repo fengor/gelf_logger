@@ -1,0 +1,12 @@
+- name: test gelf_logger
+  connection: local
+  hosts: localhost
+  tasks:
+  - name: run gelf_logger
+    gelf_logger:
+      dest: "tcp://"
+      message: "hello_world"
+    register: testout
+  - name: dump testout
+    debug: 
+      var: testout
