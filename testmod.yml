@@ -9,6 +9,9 @@
       full_message: "lorem ipsum"
       host: "{{ ansible_hostname }}"
       level: 1
+      fields:
+          environment: "test"
+          version: "1.0"
     register: testout
   - name: dump testout
     debug: 

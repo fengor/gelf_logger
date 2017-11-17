@@ -34,6 +34,11 @@ options:
         description:
             - the syslog level of the message.
         required: true
+    fields:
+        description:
+            - dictionary with additional fields for the gelf message. The leading underscore will be 
+              automatically appended
+    
 '''
 
 EXAMPLES = '''
@@ -64,7 +69,8 @@ def run_module():
         host=dict(type='str'),
         message=dict(type='str', required=True),
         full_message=dict(type='str'),
-        level=dict(type='int', required=True)
+        level=dict(type='int', required=True),
+        fields=dict(type='dict')
     )
 
     result = dict(
@@ -82,6 +88,8 @@ def run_module():
     gelf_message.short_message = module.params['message']
     gelf_message.full_message = module.params['full_message']
     
+    for field in module.params['fields']:
+        gelf_message.__dict__["_" + field] = module.params['fields'][field]
 
     result['gelf'] = json.dumps(gelf_message.__dict__)
 
