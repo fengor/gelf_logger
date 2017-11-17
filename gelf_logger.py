@@ -22,10 +22,6 @@ options:
         description:
             - "The host the message is FROM. Defaults to {{ ansible_hostname }}
         required: false
-    timestamp:
-        description:
-            - "The timestamp of the message. Defaults to time.time()
-        required: false
     message:
         description:
             - The message you want to log. maps to GELFs short_message field
@@ -34,7 +30,10 @@ options:
         description:
             - The full message field. Use this for bigger stuff. Maps to GELFs full_message field
         required: false
-
+    level:
+        description:
+            - the syslog level of the message.
+        required: true
 '''
 
 EXAMPLES = '''
@@ -47,14 +46,25 @@ gelf:
 '''
 
 from ansible.module_utils.basic import AnsibleModule
+import time
+import json
+
+class GelfMessage:
+    def __init__(self):
+        self.version = "1.1"
+        self.host = ""
+        self.short_message = ""
+        self.full_message = ""
+        self.timestamp = time.time()
+        self.level = 1
 
 def run_module():
     module_args = dict(
         dest=dict(type='str', required=True),
         host=dict(type='str'),
-        timestamp=dict(type='int'),
         message=dict(type='str', required=True),
-        full_message=dict(type='str')
+        full_message=dict(type='str'),
+        level=dict(type='int', required=True)
     )
 
     result = dict(
@@ -67,7 +77,13 @@ def run_module():
         supports_check_mode=True
     )
 
-    result['gelf'] = module.params['message']
+    gelf_message = GelfMessage()
+    gelf_message.host = module.params['host']
+    gelf_message.short_message = module.params['message']
+    gelf_message.full_message = module.params['full_message']
+    
+
+    result['gelf'] = json.dumps(gelf_message.__dict__)
 
     if module.check_mode:
         return result

@@ -6,6 +6,9 @@
     gelf_logger:
       dest: "tcp://"
       message: "hello_world"
+      full_message: "lorem ipsum"
+      host: "{{ ansible_hostname }}"
+      level: 1
     register: testout
   - name: dump testout
     debug: 
