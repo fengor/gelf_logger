@@ -55,6 +55,7 @@ from urllib.parse import urlparse
 import json
 import time
 import socket
+import http.client as httplib
 
 class GelfMessage:
     def __init__(self):
@@ -74,7 +75,9 @@ def send_udp(host, port, gelf, compression=False):
     return True
 
 def send_http(host, port, path, gelf):
-    return true
+    conn = httplib.HTTPConnection(host=host, port=port)
+    conn.request('POST', path, gelf)
+    return True
 
 
 def run_module():
