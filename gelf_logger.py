@@ -61,6 +61,21 @@ class GelfMessage:
     def __init__(self):
         self.version = "1.1"
         self.timestamp = time.time()
+  
+    def split(gelf, chunk_size):
+        header = b'\x1e\x0f'
+        message_id = os.urandom(8)
+        chunks = [gelf[pos:pos+chunk_size] for pos in range(0, len(gelf), chunk_size)]
+        number_of_chunks = len(chunks)
+
+        for chunk_index, chunk in enumerate(chunks):
+            yield b''.join((
+                header,
+                message_id,
+                struct.pack('b', chunk_index),
+                struct.pack('b', number_of_chunks),
+                chunk
+            ))
 
 def send_tcp(host, port, gelf):
     try:
@@ -71,7 +86,15 @@ def send_tcp(host, port, gelf):
         sock.close()
     return True
 
-def send_udp(host, port, gelf, compression=False):
+def send_udp(host, port, gelf, chunksize=4096):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    #if len(gelf) <= 4096:
+    sock.sendto(gelf.encode(),(host,port))
+   # else:
+        #chunks = gelf.split(gelf, chunksize)
+        #for chunk in chunks:
+        #    sock.sendto(chunk.encode(),(host,port))
     return True
 
 def send_http(host, port, path, gelf):
