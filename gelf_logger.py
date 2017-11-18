@@ -1,4 +1,10 @@
 #!/usr/bin/python
+import json
+import time
+import socket
+import http.client as httplib
+from urllib.parse import urlparse
+from ansible.module_utils.basic import AnsibleModule
 
 ANSIBLE_METADATA = {
     'metadata_version': '1.1',
@@ -11,7 +17,7 @@ module: gelf_logger
 
 short_description: sends gelf messages to a remote endpoint
 
-version_added: "2.4"
+version_added: "2.5"
 
 options: 
     dest: 
@@ -20,7 +26,7 @@ options:
         required: true
     host:
         description:
-            - "The host the message is FROM. Defaults to {{ ansible_hostname }}
+            - "The host the message is FROM. 
         required: true
     message:
         description:
@@ -42,6 +48,25 @@ options:
 '''
 
 EXAMPLES = '''
+# send gelf via udp
+- name: send gelf via udp
+  gelf_logger: dest="udp://example.com:12201" host="{{ ansible_hostname }}" level=5 message="say hi"
+
+
+# send gelf via tcp
+- name: send gelf via tcp and full_message attribute
+  gelf_logger: dest="tcp://example.com:12201" host="{{ ansible_hostname }}" level=5 message="say hi" full_message="lorem ipsum" 
+
+# send gelf via http and additional fields
+- name: send gelf via http
+  gelf_logger: 
+    dest="http://example.com:12201/gelf" 
+    host="{{ ansible_hostname }}" 
+    level=5 
+    message="say hi"
+    fields:
+        environment: "test"
+
 '''
 
 RETURN = '''
@@ -50,34 +75,22 @@ gelf:
     type: str
 '''
 
-from ansible.module_utils.basic import AnsibleModule
-from urllib.parse import urlparse
-import json
-import time
-import socket
-import http.client as httplib
 
 class GelfMessage:
+    """
+    Class representing a GELF message
+    """
     def __init__(self):
         self.version = "1.1"
         self.timestamp = time.time()
-  
-    def split(gelf, chunk_size):
-        header = b'\x1e\x0f'
-        message_id = os.urandom(8)
-        chunks = [gelf[pos:pos+chunk_size] for pos in range(0, len(gelf), chunk_size)]
-        number_of_chunks = len(chunks)
-
-        for chunk_index, chunk in enumerate(chunks):
-            yield b''.join((
-                header,
-                message_id,
-                struct.pack('b', chunk_index),
-                struct.pack('b', number_of_chunks),
-                chunk
-            ))
+        self.host = None
+        self.short_message = None
+        self.full_message = None
 
 def send_tcp(host, port, gelf):
+    """
+    sends a GELF message via tcp
+    """
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((host, port))
@@ -86,18 +99,18 @@ def send_tcp(host, port, gelf):
         sock.close()
     return True
 
-def send_udp(host, port, gelf, chunksize=4096):
+def send_udp(host, port, gelf):
+    """
+    sends a GELF message via udp
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    #if len(gelf) <= 4096:
-    sock.sendto(gelf.encode(),(host,port))
-   # else:
-        #chunks = gelf.split(gelf, chunksize)
-        #for chunk in chunks:
-        #    sock.sendto(chunk.encode(),(host,port))
+    sock.sendto(gelf.encode(), (host, port))
     return True
 
 def send_http(host, port, path, gelf):
+    """
+    sends a GELF message via http
+    """
     conn = httplib.HTTPConnection(host=host, port=port)
     conn.request('POST', path, gelf)
     return True
@@ -107,6 +120,7 @@ def run_module():
     module_args = dict(
         dest=dict(type='str', required=True),
         host=dict(type='str', required=True),
+
         message=dict(type='str', required=True),
         full_message=dict(type='str'),
         level=dict(type='int', required=True),
@@ -114,8 +128,8 @@ def run_module():
     )
 
     result = dict(
-        gelf = "",
-        changed = False
+        gelf="",
+        changed=False
     )
 
     module = AnsibleModule(
@@ -131,16 +145,16 @@ def run_module():
 
     if module.params['full_message'] is not None:
         gelf_message.full_message = module.params['full_message']
-    
+
     if module.params['fields'] is not None:
         for field in module.params['fields']:
             gelf_message.__dict__["_" + field] = module.params['fields'][field]
 
-    if "tcp" == parse_result.scheme:
+    if parse_result.scheme == "tcp":
         send_tcp(parse_result.hostname, parse_result.port, json.dumps(gelf_message.__dict__))
-    elif "http" == parse_result.scheme:
+    elif parse_result.scheme == "http":
         send_http(parse_result.hostname, parse_result.port, parse_result.path, json.dumps(gelf_message.__dict__))
-    elif "udp" == parse_result.scheme:
+    elif parse_result.scheme == "udp":
         send_udp(parse_result.hostname, parse_result.port, json.dumps(gelf_message.__dict__))
 
     result['gelf'] = json.dumps(gelf_message.__dict__)
@@ -155,5 +169,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
